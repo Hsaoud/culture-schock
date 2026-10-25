@@ -10,7 +10,8 @@ Des illustrations (`assets/art`), de la carte (`assets/world.json`) et des clich
   (modules ES, rechargement direct). Après une modification du JS, `npm run build` régénère `jouer.html` + `dist/game.js`.
 - `npm test` : moteur et éditions. `npm run check:locales` : clés et variables des traductions.
 - `?all` débloque toutes les nations, `?debug` expose l'état dans la console (`CS`).
-- En ligne : le dépôt est statique, il peut être publié tel quel (GitHub Pages, tout hébergement de fichiers).
+- En ligne : le dépôt est statique, il peut être publié tel quel (GitHub Pages, tout hébergement de fichiers). L'offre gratuite de Netlify superpose son badge « Powered by Netlify » (il fait partie de l'offre et ne se masque pas) ; le jeu remonte alors son bouton principal pour qu'il reste cliquable. GitHub Pages n'ajoute rien.
+- Sur téléphone, « Ajouter à l'écran d'accueil » installe le jeu, qui s'ouvre alors en plein écran (manifeste `site.webmanifest`, icônes dans `icons/`).
 
 ## Le jeu en une phrase
 
@@ -104,11 +105,14 @@ Tout est traduit : interface, accessibilité (`title`, `aria-label`), tutoriel, 
 | Exagérer (onglets `1` `2` `3`) | `E` | X (onglets LB / RB, retirer Y) | EXAGÉRER |
 | Recentrer sur sa capitale | `H` ou clic sur son portrait | View / Select | portrait |
 | Menu, fermer | `Échap` | Start, B | ☰, ✕ |
+| Plein écran | `F` | — | bouton ⛶ (titre, pause, HUD) |
 | Parcourir menus, HUD, atelier, affaires | flèches, `Entrée`, `Tab` | croix (ou stick gauche dans les menus), A | toucher |
 
 Manette : Gamepad API, disposition standard Xbox / PlayStation, détectée à la première pression. Quand elle sert, chaque bouton rappelle sa touche (A, B, X, Y, LB·RB…) et un curseur apparaît sur la carte ; la souris ou le toucher les masquent. Dans l'atelier, la croix sélectionne les hexagones et A achète le trait choisi. Vibrations selon le matériel. Débrancher la manette met la partie en pause. Au clavier, l'anneau de focus n'apparaît qu'en navigation clavier.
 
 Téléphone : sélecteurs en liste, rangée des nations défilante, fiche pays en feuille au-dessus du HUD (bouton ✕), atelier compact, aide défilante, marges des encoches (`safe-area`) et HUD resserré à l'horizontale. Vérifié en 375 × 812 et 812 × 375 dans un navigateur, sans appareil réel ; la manette a été simulée (pas de manette physique dans l'environnement de test).
+
+Plein écran : bouton sur l'écran titre, dans le menu pause et sous le zoom en jeu, ou touche `F` ; on en sort de la même façon ou par `Échap`. Sur iPhone, où Safari ne le propose pas aux pages, le bouton disparaît et c'est l'installation sur l'écran d'accueil qui donne le plein écran.
 
 Sauvegarde automatique (toutes les 20 s et en quittant) ; « Continuer » sur l'écran titre.
 
@@ -122,11 +126,20 @@ Sauvegarde automatique (toutes les 20 s et en quittant) ; « Continuer » sur l'
 - `js/i18n.js` : langue choisie, éditions, noms de pays et formats régionaux. Le français (`js/data/` + `js/locales/fr.js`) est la source ; une clé absente d'une édition y retombe.
 - `js/locales/` : éditions `en.js` (britannique + corrections américaines `US`), `es.js`, `it.js`, `zh.js`, `ru.js`, de même forme que la source. `npm run check:locales` signale les clés manquantes et les variables `{…}` différentes.
 - `js/input.js` : manette (Gamepad API) et navigation spatiale clavier / croix.
+- `js/fullscreen.js` : plein écran (API Fullscreen et variante WebKit).
 - `js/audio.js` : sons et musique synthétisés (Web Audio).
 - `js/geo-data.js` : généré par `node tools/build-geo.mjs` à partir de `assets/world.json` (population, richesse, climat, voisins, 9 000 points).
 - `tools/` : serveur local, paquet autonome (esbuild), banc d'équilibrage, vérification des éditions.
 - `assets/art/` : portraits (`champions-final.png`), emblèmes (`relics-final.png`), écran titre (`sanctuary.png`) et 28 planches de scènes (`events/*.webp`, 12 cases chacune).
 - `tests/` : `npm test` — moteur (`sim.test.mjs`) et éditions (`i18n.test.mjs` : textes complets, 336 récits par langue, noms de pays, suggestions, stockage bloqué, formats).
+
+## Fluidité et qualité d'image
+
+- La carte n'est redessinée que lorsqu'elle est visible : sous les menus, l'atelier ou une affaire illustrée, elle reste figée.
+- Caméra immobile : fond, terres et pays sont fusionnés en une seule image copiée d'un bloc (au lieu de trois couches plein écran), identique au pixel près ; la couche des pays n'est redessinée que si la partie a avancé. Le bandeau d'actualités ne relit plus la mise en page à chaque image.
+- Qualité adaptative : si les images ralentissent durablement (très grand écran, appareil modeste), la carte est rendue un peu moins finement, par paliers ; l'interface et les illustrations ne changent pas.
+- Écrans denses (4K, Retina) : côtes, hachures et emblèmes de la carte sont calculés à la définition de l'écran.
+- Illustrations : toujours affichées à leurs vraies proportions, recadrées plutôt qu'étirées (affaires sur téléphone, portraits, fin de partie). En ultra-large (21:9 et plus), l'écran titre garde l'illustration entière, prolongée par sa version floutée, et l'écran de fin reste centré à taille raisonnable.
 
 ## Illustrations des onglets
 

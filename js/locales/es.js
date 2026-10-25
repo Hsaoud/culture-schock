@@ -20,6 +20,8 @@ export default {
     'title.inputs': 'TECLADO · CONTROL · TÁCTIL',
     'audio.sound': 'Sonidos',
     'audio.music': 'Música',
+    'fs.enter': 'Pantalla completa',
+    'fs.exit': 'Salir de pantalla completa',
     'select.back': 'Regresar',
     'select.title': 'ELIGE TU CLICHÉ',
     'select.tutorial': 'TUTORIAL',

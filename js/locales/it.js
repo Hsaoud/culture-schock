@@ -25,6 +25,8 @@ export default {
 
     'audio.sound': 'Suoni',
     'audio.music': 'Musica',
+    'fs.enter': 'Schermo intero',
+    'fs.exit': 'Esci dallo schermo intero',
 
     'select.back': 'Indietro',
     'select.title': 'SCEGLI IL TUO CLICHÉ',

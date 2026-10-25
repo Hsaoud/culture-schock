@@ -25,6 +25,8 @@ export default {
 
     'audio.sound': '音效',
     'audio.music': '音乐',
+    'fs.enter': '全屏',
+    'fs.exit': '退出全屏',
 
     'select.back': '返回',
     'select.title': '选择你的刻板印象',

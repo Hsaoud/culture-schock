@@ -22,6 +22,8 @@ export default {
     'title.inputs': 'КЛАВИАТУРА · ГЕЙМПАД · СЕНСОР',
     'audio.sound': 'Звуки',
     'audio.music': 'Музыка',
+    'fs.enter': 'Полный экран',
+    'fs.exit': 'Выйти из полноэкранного режима',
     'select.back': 'Назад',
     'select.title': 'ВЫБЕРИТЕ СВОЁ КЛИШЕ',
     'select.tutorial': 'ОБУЧЕНИЕ',

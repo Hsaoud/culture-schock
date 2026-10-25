@@ -42,6 +42,17 @@ export function spritePct(sheetKey, [x, y, w, h]) {
   return `background-image:url('${sheet.src}');background-size:${sheet.w / w * 100}% ${sheet.h / h * 100}%;background-position:${px}% ${py}%;background-repeat:no-repeat`;
 }
 
+// Découpe affichée « en couverture » dans un cadre .framed : elle le remplit sans jamais être
+// déformée (le surplus est rogné), quel que soit le format de l'écran, du téléphone à l'ultra-large.
+export const cover = (style, aspect) => `<i class="cover" style="${style};--a:${aspect}"></i>`;
+export const cardCover = id => cover(spritePct('champions', cardRect(id)), 384 / 512);
+export function eventCover(nationId, family, index) {
+  const lay = EVENT_ART_LAYOUT[`${nationId.toLowerCase()}-${family}`];
+  const col = index % 4, row = Math.floor(index / 4) % 3;
+  const aspect = lay ? (lay.columns[col + 1] - lay.columns[col]) / (lay.rows[row + 1] - lay.rows[row]) : 1;
+  return cover(eventArt(nationId, family, index), aspect.toFixed(4));
+}
+
 // Illustrations d'événements : planches 4 × 3 par nation et famille.
 export function eventArt(nationId, family, index) {
   const key = `${nationId.toLowerCase()}-${family}`, lay = EVENT_ART_LAYOUT[key];

@@ -2,7 +2,7 @@
 import * as S from './sim.js';
 import {GEO} from './geo-data.js';
 import {NATIONS} from './data/nations.js';
-import {loadArt, eventArt} from './assets.js';
+import {loadArt, eventCover} from './assets.js';
 import {Ticker} from './ticker.js';
 import {MapView} from './map.js';
 import {Hud} from './hud.js';
@@ -14,6 +14,7 @@ import {saveGame, loadGame, hasSave, clearSave, recordWin, progress} from './sto
 import {t, nat, flv, countryName, traitName, worldText, eventCard, lower, exclaim, fmtPct, languageInfo,
   setLanguage, storedLanguage, suggestLanguage, onLanguageChange} from './i18n.js';
 import {Gamepad, moveFocus, sendKey, trackInputMode, padKey} from './input.js';
+import {initFullscreen, syncFullscreen} from './fullscreen.js';
 
 const $ = id => document.getElementById(id);
 const app = {mode: 'boot', s: null, speed: 1, lastSpeed: 1, hold: 0, uiT: 0, saveT: 0, ending: false};
@@ -23,6 +24,8 @@ const color = k => NATIONS[app.s.cultures[k].id].color;
 // --- Démarrage ---------------------------------------------------------------
 async function boot() {
   trackInputMode();
+  initFullscreen();
+  watchHostBadge();
   await loadArt(p => { $('load').style.width = p * 100 + '%'; });
   app.map = new MapView($('map'));
   app.hud = new Hud($('hud'), hudActions);
@@ -39,6 +42,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (document.hidden && app.mode === 'game') setSpeed(0); });
   addEventListener('beforeunload', () => { if (app.mode === 'game' && !app.ending) saveGame(app.s); });
   onLanguageChange(relabel);
+  onLanguageChange(syncFullscreen);
   // Première ouverture : choix de la langue, suggérée d'après le navigateur.
   if (storedLanguage()) title(); else chooseLanguage(null);
   requestAnimationFrame(loop);
@@ -158,9 +162,36 @@ function loop(now) {
     if (app.saveT > 20 && !app.ending) { app.saveT = 0; saveGame(s); }
   }
   if (app.s && (app.mode === 'game' || app.mode === 'pause')) app.ticker.update(dt);
-  app.map.render(app.mode === 'game' ? s : null, dt);
+  // Carte entièrement couverte (menus, atelier, affaire) : inutile de la redessiner.
+  if (!overlay()) { app.map.render(app.mode === 'game' ? s : null, dt); adaptQuality(dt); }
   updateCursor(dt);
   requestAnimationFrame(loop);
+}
+
+// Qualité adaptative : si les images ralentissent durablement (écran très grand, appareil modeste),
+// la carte est rendue un peu moins finement ; une seule tentative de retour en pleine définition.
+const perf = {avg: 16, slow: 0, fast: 0, retried: false};
+function adaptQuality(dt) {
+  if (dt > 0.1 || document.hidden) return; // onglet en arrière-plan ou pause du navigateur
+  const m = app.map, ms = dt * 1000;
+  perf.avg += (ms - perf.avg) * 0.05;
+  if (perf.avg > 26 && m.quality > 0.55) {
+    if ((perf.slow += dt) > 2) { m.setQuality(m.quality - 0.15); layout(); perf.slow = 0; perf.avg = 16; perf.fast = 0; }
+  } else perf.slow = 0;
+  if (perf.avg < 18 && m.quality < 1 && !perf.retried) {
+    if ((perf.fast += dt) > 20) { perf.retried = true; m.setQuality(m.quality + 0.15); layout(); perf.fast = 0; }
+  } else perf.fast = 0;
+}
+
+// Hébergeur qui superpose un badge en bas à droite (offre gratuite de Netlify) : le bouton
+// principal remonte pour rester visible et cliquable.
+function watchHostBadge() {
+  const check = () => {
+    const on = !!document.getElementById('nl-badge-frame');
+    if (on !== document.body.classList.contains('host-badge')) { document.body.classList.toggle('host-badge', on); layout(); }
+  };
+  new MutationObserver(check).observe(document.body, {childList: true});
+  check();
 }
 
 function setSpeed(v) {
@@ -276,7 +307,7 @@ function showEvent(s) {
   app.eventShown = true; closeTransient();
   el.hidden = false;
   el.innerHTML = `<div class="event-card" role="dialog" aria-label="${c.title}">
-    <div class="pic" style="${eventArt(s.nation, ev.family, ev.variant)}"></div>
+    <div class="pic framed">${eventCover(s.nation, ev.family, ev.variant)}</div>
     <div class="body"><span class="fam"><span class="emoji">${c.icon}</span>${c.label}</span>
       <h2>${c.title}</h2><p>${c.line}</p>
       <div class="choices">${c.options.map((o, i) => `<button class="choice" data-i="${i}" ${S.canChoose(s, o) ? '' : 'disabled'}>

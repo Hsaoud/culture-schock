@@ -1,6 +1,7 @@
 // Écrans hors partie : langue, titre, choix de la nation, pause, aide, fin, chute d'une culture.
 import {NATIONS, ORDER, SCENARIOS} from './data/nations.js';
-import {spriteCSS, spritePct, cardRect, relicRect, eventArt, SHEETS} from './assets.js';
+import {spriteCSS, spritePct, relicRect, cardCover, eventCover, SHEETS} from './assets.js';
+import {fullscreenButton, fullscreenIcon} from './fullscreen.js';
 import {isUnlocked, progress} from './store.js';
 import {sfx, audioPrefs, setAudio} from './audio.js';
 import {t, tIn, nat, flv, endText, lower, quote, LANGUAGES, languageInfo, getLanguage} from './i18n.js';
@@ -65,7 +66,7 @@ export function showLanguage({onPick, onBack, suggested}) {
     <header>${onBack ? `<button class="ibtn" data-back>←${padKey('B')}</button>` : '<div style="width:44px"></div>'}<h2></h2><div style="width:44px"></div></header>
     <p class="sub"></p>
     <div class="lgrid">${LANGUAGES.map((l, i) => `<button class="lcard" data-i="${i}" lang="${l.id}" style="--c:${NATIONS[l.nation].color}">
-      <span class="lart" style="${spritePct('champions', cardRect(l.nation))}"></span>
+      <span class="lart framed">${cardCover(l.nation)}</span>
       <span class="ltxt"><b>${l.name}</b><small>${l.region}</small></span>
       <i class="lrelic" style="${spritePct('relics', relicRect(l.nation))}"></i>
       ${l.id === (onBack ? getLanguage() : suggested) ? `<em class="ltag">${tIn(l.id, onBack ? 'lang.current' : 'lang.suggested')}</em>` : ''}</button>`).join('')}</div>
@@ -101,6 +102,7 @@ export function showLanguage({onPick, onBack, suggested}) {
 export function showTitle({onPlay, onContinue, onHelp, onLanguage, canContinue}) {
   const el = screen();
   el.innerHTML = `<div class="title">
+    <div class="art-fill" style="background-image:url('${SHEETS.sanctuary.src}')"></div>
     <div class="art" style="background-image:url('${SHEETS.sanctuary.src}')"></div>
     <div class="center">
       <div class="tag">${t('title.tag')}</div>
@@ -114,7 +116,7 @@ export function showTitle({onPlay, onContinue, onHelp, onLanguage, canContinue})
       </div>
       <div class="inputs">⌨️ 🎮 👆 · ${t('title.inputs')}</div>
     </div>
-    <div class="corner">${audioButtons()}</div>
+    <div class="corner">${fullscreenButton()}${audioButtons()}</div>
     <div class="credit">${t('title.credit')}</div>
   </div>`;
   sparkles(el.querySelector('.title'));
@@ -136,7 +138,7 @@ export function showSelect({onPick, onBack}) {
     <div class="cards">${ORDER.map((id, i) => {
       const n = nat(id), lock = !isUnlocked(id);
       return `<button class="ncard ${lock ? 'locked' : ''}" data-i="${i}" style="--c:${n.color}" aria-label="${n.name}">
-        <div class="art" style="${spritePct('champions', cardRect(id))}"></div><div class="shade"></div>
+        <div class="art framed">${cardCover(id)}</div><div class="shade"></div>
         ${n.tutorial ? `<div class="tuto">${t('select.tutorial')}</div>` : ''}
         <div class="nm">${n.name}</div><div class="stars">${stars(n.stars)}${wins[id] ? ' 🏆' : ''}</div>
         ${lock ? '<div class="lock emoji">🔒</div>' : ''}</button>`;
@@ -188,7 +190,7 @@ export function showPause({onResume, onRestart, onQuit, onHelp, onLanguage}) {
     ${languageButton()}
     <button class="btn ghost" data-a="restart">↻ ${t('pause.restart')}</button>
     <button class="btn ghost" data-a="quit">⌂ ${t('pause.quit')}</button>
-    <div style="display:flex;gap:10px;justify-content:center">${audioButtons()}</div></div></div></div>`;
+    <div style="display:flex;gap:10px;justify-content:center">${fullscreenButton()}${audioButtons()}</div></div></div></div>`;
   bindAudio(el);
   const map = {resume: onResume, restart: onRestart, quit: onQuit, help: onHelp};
   el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { sfx.click(); map[b.dataset.a](); });
@@ -213,6 +215,7 @@ export function showHelp(onClose, nationId) {
     ['ctl.home', k('H'), g('⧉'), t('key.portrait')],
     ['ctl.menu', k(t('key.esc')), `${g('☰')} ${g('B')}`, '☰'],
     ['ctl.navigate', `${k('←↑→↓')} ${k(t('key.enter'))}`, `${t('key.dpad')} · ${g('A')}`, t('key.tap')],
+    ['fs.enter', k('F'), '—', `<span class="fs-glyph">${fullscreenIcon}</span>`],
   ];
   const el = screen();
   el.innerHTML = `<div class="modal"><div class="panel help"><h2>${t('help.title')}</h2>
@@ -245,7 +248,7 @@ export function showEnd(s, {win, reason, by}, unlocked, {onRetry, onMenu, onNext
   if (win) title = f.win; else if (reason === 'cure') sub = f.lose;
   const line = win ? n.quotes[3] : n.quotes[2];
   el.innerHTML = `<div class="end ${win ? 'win' : 'lose'}" style="--c:${n.color}">
-    <div class="hero" style="${win ? eventArt(id, 'summit', Math.floor(Math.random() * 12)) : spritePct('champions', cardRect(id))}"></div>
+    <div class="hero framed">${win ? eventCover(id, 'summit', Math.floor(Math.random() * 12)) : cardCover(id)}</div>
     <div class="res">
       <h1>${win ? t('end.win') : t('end.lose')}<br>${title}</h1>
       <div class="quote">${quote(line)}</div>
@@ -274,7 +277,7 @@ export function showEnd(s, {win, reason, by}, unlocked, {onRetry, onMenu, onNext
 export function fallCard(id, text, ms = 2600) {
   const n = NATIONS[id], el = document.createElement('div');
   el.className = 'fall-card'; el.style.setProperty('--c', n.color); el.style.zIndex = 45; el.style.position = 'fixed';
-  el.innerHTML = `<div class="inner"><div class="pic" style="${eventArt(id, 'counter', Math.floor(Math.random() * 12))}"></div><h2>${text}</h2></div>`;
+  el.innerHTML = `<div class="inner"><div class="pic framed">${eventCover(id, 'counter', Math.floor(Math.random() * 12))}</div><h2>${text}</h2></div>`;
   document.body.appendChild(el);
   setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, ms);
 }

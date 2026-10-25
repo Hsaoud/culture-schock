@@ -22,6 +22,8 @@ export default {
     'title.inputs': 'KEYBOARD · CONTROLLER · TOUCH',
     'audio.sound': 'Sound',
     'audio.music': 'Music',
+    'fs.enter': 'Full screen',
+    'fs.exit': 'Exit full screen',
 
     'select.back': 'Back',
     'select.title': 'CHOOSE YOUR CLICHÉ',
@@ -686,6 +688,7 @@ export default {
 // American English: vocabulary and idiom only (spelling is converted automatically).
 // Arrays replace the whole list.
 export const US = {
+  ui: {'fs.enter': 'Fullscreen', 'fs.exit': 'Exit fullscreen'},
   ends: {
     cure: ['The world has learned nuance', 'Nobody generalizes anymore. How sad.'],
     home: ['Your capital has fallen', 'Even at home, nobody believes it anymore.'],

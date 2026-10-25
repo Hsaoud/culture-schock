@@ -25,6 +25,8 @@ export default {
 
     'audio.sound': 'Sons',
     'audio.music': 'Musique',
+    'fs.enter': 'Plein écran',
+    'fs.exit': 'Quitter le plein écran',
 
     'select.back': 'Retour',
     'select.title': 'CHOISISSEZ VOTRE CLICHÉ',

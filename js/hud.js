@@ -2,7 +2,8 @@
 import * as S from './sim.js';
 import {GEO} from './geo-data.js';
 import {NATIONS} from './data/nations.js';
-import {spriteCSS, spritePct, portraitRect, relicRect, cardRect} from './assets.js';
+import {spriteCSS, spritePct, portraitRect, relicRect, cardCover} from './assets.js';
+import {fullscreenButton} from './fullscreen.js';
 import {t, nat, flv, fxLabel, countryName, fmtPop, fmtNum} from './i18n.js';
 import {padKey} from './input.js';
 
@@ -50,6 +51,7 @@ export class Hud {
         <button class="ibtn" data-act="zin" title="${t('hud.zoomIn')}" aria-label="${t('hud.zoomIn')}">＋</button>
         <button class="ibtn" data-act="zout" title="${t('hud.zoomOut')}" aria-label="${t('hud.zoomOut')}">－</button>
         <button class="ibtn emoji" data-act="zreset" title="${t('hud.world')}" aria-label="${t('hud.world')}">🌍</button>
+        ${fullscreenButton()}
       </div>
       <div class="bottom">
         <div class="stats" title="${t('hud.stats')}">
@@ -147,7 +149,7 @@ export class Hud {
     const d = $('#dialog'), n = NATIONS[id];
     clearTimeout(this.sayTimer);
     d.hidden = false; d.classList.remove('out'); d.style.setProperty('--c', n.color);
-    d.innerHTML = `<div class="portrait" style="${spritePct('champions', cardRect(id))}"></div><div class="bubble">${text}</div>`;
+    d.innerHTML = `<div class="portrait framed">${cardCover(id)}</div><div class="bubble">${text}</div>`;
     d.style.animation = 'none'; void d.offsetWidth; d.style.animation = '';
     if (ms) this.sayTimer = setTimeout(() => this.hush(), ms);
   }

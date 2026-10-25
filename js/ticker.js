@@ -13,10 +13,12 @@ export class Ticker {
     this.label = root.querySelector('.tk-label'); this.track = root.querySelector('.tk-track'); this.belt = root.querySelector('.tk-belt');
     root.addEventListener('pointerenter', () => { this.hold = true; });
     root.addEventListener('pointerleave', () => { this.hold = false; });
+    addEventListener('resize', () => { this.trackW = 0; });
+    this.widths = []; this.trackW = 0;
   }
   setup(s) {
     const f = flv(s.nation);
-    this.s = s; this.live = []; this.offset = 0; this.belt.innerHTML = ''; this.recent = [];
+    this.s = s; this.live = []; this.offset = 0; this.belt.innerHTML = ''; this.recent = []; this.widths = []; this.trackW = 0;
     this.label.innerHTML = `<span class="emoji">📺</span><b>${f.channel}</b>`;
   }
   // Nouvelle du direct : passe avant les brèves.
@@ -28,21 +30,24 @@ export class Ticker {
   update(dt) {
     if (!this.s) return;
     if (!this.hold) this.offset += SPEED * dt;
+    // Largeurs mesurées à l'ajout seulement : aucune lecture de mise en page à chaque image.
     // Retire les nouvelles sorties à gauche, en compensant le décalage.
-    let first = this.belt.firstElementChild;
-    while (first && first.offsetWidth && first.offsetWidth < this.offset) {
-      this.offset -= first.offsetWidth; first.remove(); first = this.belt.firstElementChild;
-    }
+    while (this.widths[0] > 0 && this.widths[0] < this.offset) { this.offset -= this.widths.shift(); this.belt.firstElementChild.remove(); }
     // Remplit jusqu'à dépasser la largeur visible.
-    let guard = 0;
-    while (this.belt.scrollWidth - this.offset < this.track.clientWidth + 300 && guard++ < 6) this.append(this.next());
+    if (!this.trackW) this.trackW = this.track.clientWidth;
+    let guard = 0, total = 0;
+    for (const w of this.widths) total += w;
+    while (total - this.offset < this.trackW + 300 && guard++ < 6) total = this.append(this.next());
     this.belt.style.transform = `translate3d(${-this.offset}px,0,0)`;
   }
+  // Ajoute une nouvelle et remesure le bandeau (les polices d'émoji peuvent arriver après coup).
   append({icon, text, hot}) {
     const el = document.createElement('span');
     el.className = 'tk-item' + (hot ? ' hot' : '');
     el.innerHTML = `${hot ? `<i>${t('tk.live')}</i>` : ''}<span class="emoji">${icon}</span>${text}`;
     this.belt.appendChild(el);
+    this.widths = [...this.belt.children].map(c => c.offsetWidth);
+    return this.widths.reduce((a, b) => a + b, 0);
   }
 
   next() {

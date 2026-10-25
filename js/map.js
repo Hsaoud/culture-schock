@@ -16,8 +16,9 @@ const BBOX = GEO.map(g => {
 const HIT_ORDER = GEO.map((_, i) => i).sort((a, b) => GEO[a].area - GEO[b].area);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Cache du fond : carte entière pré-rendue (px par unité, marge en unités).
-const WORLD_RES = 2.5, PAD = 24;
+// Cache du fond : carte entière pré-rendue (px par unité, marge en unités). La finesse monte
+// sur les écrans denses (4K, Retina) pour garder des côtes nettes, dans la limite de ~10 Mpx.
+const WORLD_RES = 2.5, WORLD_RES_MAX = 4, PAD = 24;
 const LAYER_EVERY = 0.12; // rafraîchissement de la couche des pays (s)
 
 const hex = (c, a) => { const n = parseInt(c.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
@@ -25,7 +26,8 @@ const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 export class MapView {
   constructor(canvas) {
-    this.cv = canvas; this.g = canvas.getContext('2d');
+    // Carte opaque : le compositeur n'a rien à mélanger derrière.
+    this.cv = canvas; this.g = canvas.getContext('2d', {alpha: false});
     this.hit = document.createElement('canvas').getContext('2d');
     this.cam = {x: W / 2, y: H / 2 + 10, z: 1};
     this.insets = {top: 80, bottom: 150};
@@ -35,8 +37,12 @@ export class MapView {
     // Calques : fond océan (écran), terres (cache monde ou rendu net à l'arrêt), pays (rafraîchi ~8 fois/s).
     this.bg = document.createElement('canvas');
     this.crisp = document.createElement('canvas'); this.crispKey = '';
-    this.layer = document.createElement('canvas'); this.layerCam = null; this.layerAge = 0;
-    this.world = null; this.lastCamKey = ''; this.idle = 0;
+    this.layer = document.createElement('canvas'); this.layerCam = null; this.layerAge = 0; this.layerStamp = ''; this.layerGen = 0;
+    // Image fixe : fond + terres + pays fusionnés, copiée d'un bloc tant que la caméra ne bouge pas.
+    this.base = document.createElement('canvas'); this.baseKey = '';
+    this.world = null; this.worldRes = WORLD_RES; this.lastCamKey = ''; this.idle = 0;
+    // Échelle de rendu : 1 = pleine définition ; réduite seulement si les images ralentissent.
+    this.quality = 1;
     this.patterns = {}; this.sprites = {};
     this.onSelect = null; this.onBubble = null; this.onRaid = null; this.onHover = null;
     this.resize();
@@ -45,19 +51,23 @@ export class MapView {
 
   // --- Caméra --------------------------------------------------------------
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * this.quality;
     this.dpr = dpr; this.w = innerWidth; this.h = innerHeight;
     this.cv.width = Math.round(this.w * dpr); this.cv.height = Math.round(this.h * dpr);
     this.cv.style.width = this.w + 'px'; this.cv.style.height = this.h + 'px';
-    for (const c of [this.bg, this.crisp, this.layer]) { c.width = this.cv.width; c.height = this.cv.height; }
+    for (const c of [this.bg, this.crisp, this.layer, this.base]) { c.width = this.cv.width; c.height = this.cv.height; }
     this.fit = Math.min(this.w / (W * 0.98), (this.h - this.insets.top - this.insets.bottom) / (H * 0.92));
     // Échelle des pictogrammes : plus petits quand la carte est minuscule (téléphone en portrait).
     this.ui = Math.max(0.55, Math.min(1, this.fit / 1.1));
-    this.crispKey = ''; this.layerCam = null;
+    const res = Math.max(WORLD_RES, Math.min(WORLD_RES_MAX, this.fit * dpr * 1.05));
+    if (Math.abs(res - this.worldRes) / this.worldRes > 0.15) { this.worldRes = res; this.world = null; }
+    if (Math.max(1, Math.round(dpr)) !== this.patternScale) this.patterns = {};
+    this.crispKey = ''; this.layerCam = null; this.baseKey = '';
     this.clampCam();
     this.drawOcean();
   }
   invalidate() { this.layerCam = null; }
+  setQuality(q) { q = Math.max(0.55, Math.min(1, q)); if (q !== this.quality) { this.quality = q; this.patterns = {}; this.resize(); } }
   setInsets(top, bottom) { this.insets = {top, bottom}; this.resize(); }
   get scale() { return this.fit * this.cam.z; }
   get center() { return [this.w / 2, this.insets.top + (this.h - this.insets.top - this.insets.bottom) / 2]; }
@@ -168,8 +178,9 @@ export class MapView {
   // --- Rendu ------------------------------------------------------------------
   pattern(color) {
     if (this.patterns[color]) return this.patterns[color];
-    const c = document.createElement('canvas'); c.width = c.height = 10;
-    const g = c.getContext('2d');
+    const q = this.patternScale = Math.max(1, Math.round(this.dpr));
+    const c = document.createElement('canvas'); c.width = c.height = 10 * q;
+    const g = c.getContext('2d'); g.scale(q, q);
     g.fillStyle = hex(color, 0.78); g.fillRect(0, 0, 10, 10);
     g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 2.2;
     g.beginPath(); g.moveTo(-2, 12); g.lineTo(12, -2); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(8, 12); g.lineTo(12, 8); g.stroke();
@@ -200,12 +211,20 @@ export class MapView {
   // Le monde entier rendu une fois : pendant les déplacements, on ne fait que le transformer.
   ensureWorld() {
     if (this.world) return;
-    const c = document.createElement('canvas');
-    c.width = Math.round((W + 2 * PAD) * WORLD_RES); c.height = Math.round((H + 2 * PAD + 40) * WORLD_RES);
+    const c = document.createElement('canvas'), r = this.worldRes;
+    c.width = Math.round((W + 2 * PAD) * r); c.height = Math.round((H + 2 * PAD + 40) * r);
     const g = c.getContext('2d');
-    g.setTransform(WORLD_RES, 0, 0, WORLD_RES, PAD * WORLD_RES, PAD * WORLD_RES);
-    this.drawLand(g, WORLD_RES);
+    g.setTransform(r, 0, 0, r, PAD * r, PAD * r);
+    this.drawLand(g, r);
     this.world = c;
+  }
+  // Terres pour la caméra courante : version nette si elle est prête, sinon cache monde transformé.
+  drawLandTo(g, useCrisp, sx = 0, sy = 0) {
+    const dpr = this.dpr, sc = this.scale, [cx, cy] = this.center;
+    if (useCrisp) { g.setTransform(1, 0, 0, 1, sx * dpr, sy * dpr); g.drawImage(this.crisp, 0, 0); return; }
+    const k = sc / this.worldRes;
+    g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (cx - (this.cam.x + PAD) * sc + sx), dpr * (cy - (this.cam.y + PAD) * sc + sy));
+    g.drawImage(this.world, 0, 0);
   }
   // Version nette à l'échelle courante, rendue seulement quand la caméra est immobile et zoomée.
   renderCrisp(key) {
@@ -238,23 +257,32 @@ export class MapView {
     const g = this.g, dpr = this.dpr, sc = this.scale, [cx, cy] = this.center;
     let sx = 0, sy = 0;
     if (this.shakeAmt > 0.1) { sx = (Math.random() - 0.5) * this.shakeAmt; sy = (Math.random() - 0.5) * this.shakeAmt; this.shakeAmt *= Math.pow(0.02, dt); }
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(this.bg, 0, 0);
-    // Terres : rendu net à l'arrêt quand on zoome au-delà du cache, sinon cache monde transformé.
+    // Terres : rendu net à l'arrêt quand on zoome au-delà du cache (en pixels de l'écran), sinon cache monde transformé.
     this.ensureWorld();
-    const sharp = sc > WORLD_RES * 1.15;
+    const sharp = sc * dpr > this.worldRes * 1.15;
     if (sharp && this.idle > 0.15 && this.crispKey !== key) this.renderCrisp(key);
-    if (sharp && this.crispKey === key) { g.setTransform(1, 0, 0, 1, sx * dpr, sy * dpr); g.drawImage(this.crisp, 0, 0); }
-    else {
-      const k = sc / WORLD_RES;
-      g.setTransform(dpr * k, 0, 0, dpr * k, dpr * (cx - (this.cam.x + PAD) * sc + sx), dpr * (cy - (this.cam.y + PAD) * sc + sy));
-      g.drawImage(this.world, 0, 0);
-    }
-    // Pays : couche mise en cache, rafraîchie quand la caméra est immobile.
+    const crisp = sharp && this.crispKey === key;
+    // Pays : couche mise en cache, redessinée à l'arrêt quand la partie a avancé.
     if (s) {
       this.layerAge += dt;
-      if (!this.layerCam || (!moving && (this.layerAge > LAYER_EVERY || this.layerCam.key !== key))) this.renderLayer(s, key);
-      if (this.layerCam) this.blitFrom(this.layer, this.layerCam, this.layerCam.scale, sx, sy);
+      const stamp = `${s.day}|${s.stats.events || 0}|${s.cultures.filter(c => c.alive).length}`;
+      if (!this.layerCam || (!moving && (this.layerCam.key !== key || (this.layerAge > LAYER_EVERY && stamp !== this.layerStamp)))) this.renderLayer(s, key, stamp);
+    }
+    if (s && !moving && !sx && !sy && (crisp || !sharp) && this.layerCam?.key === key) {
+      // Caméra immobile : une seule copie plein écran (fond, terres et pays déjà fusionnés).
+      const bk = `${this.layerGen}|${key}|${crisp}`;
+      if (this.baseKey !== bk) {
+        const b = this.base.getContext('2d', {alpha: false});
+        b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(this.bg, 0, 0);
+        this.drawLandTo(b, crisp);
+        b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(this.layer, 0, 0);
+        this.baseKey = bk;
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(this.base, 0, 0);
+    } else {
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(this.bg, 0, 0);
+      this.drawLandTo(g, crisp, sx, sy);
+      if (s && this.layerCam) this.blitFrom(this.layer, this.layerCam, this.layerCam.scale, sx, sy);
     }
     g.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * (cx - this.cam.x * sc + sx), dpr * (cy - this.cam.y * sc + sy));
     if (s) this.drawDynamic(s, g, sc);
@@ -265,7 +293,7 @@ export class MapView {
   }
 
   // Teintes, caricatures (hachures), points de densité et frontières fermées.
-  renderLayer(s, key) {
+  renderLayer(s, key, stamp) {
     const g = this.layer.getContext('2d'), dpr = this.dpr, sc = this.scale, [cx, cy] = this.center;
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, this.layer.width, this.layer.height);
     g.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * (cx - this.cam.x * sc), dpr * (cy - this.cam.y * sc));
@@ -282,7 +310,7 @@ export class MapView {
       if (dk >= 0) { g.fillStyle = hex(colors[dk], 0.1 + 0.32 * dv); g.fill(PATHS[i]); }
       if (ck >= 0 && cv > 0.01) {
         const p = this.pattern(colors[ck]);
-        p.setTransform(new DOMMatrix().scale(1 / sc));
+        p.setTransform(new DOMMatrix().scale(1 / (sc * this.patternScale)));
         g.globalAlpha = Math.min(1, 0.15 + cv); g.fillStyle = p; g.fill(PATHS[i]); g.globalAlpha = 1;
       }
     }
@@ -317,7 +345,7 @@ export class MapView {
     }
     g.setLineDash([]);
     this.layerCam = {x: this.cam.x, y: this.cam.y, scale: sc, key};
-    this.layerAge = 0;
+    this.layerAge = 0; this.layerStamp = stamp; this.layerGen++;
   }
 
   // Sprites pré-rendus : évitent textes émoji et flous recalculés à chaque image.
@@ -397,7 +425,7 @@ export class MapView {
     const x = gg.x, y = gg.y;
     g.save();
     g.fillStyle = 'rgba(0,0,0,0.55)'; g.beginPath(); g.arc(x, y + 2 / sc, R + 4 / sc, 0, Math.PI * 2); g.fill();
-    const icon = relicIcon(cu.id, 64, !cu.alive);
+    const icon = relicIcon(cu.id, 96, !cu.alive);
     if (icon) g.drawImage(icon, x - R, y - R, R * 2, R * 2);
     // Anneau de vie de la capitale.
     const hp = cu.alive ? S.homeShare(s, k) : 0;
@@ -463,7 +491,7 @@ export class MapView {
       const R = 17 * Math.max(0.8, this.ui), pulse = 1 + 0.12 * Math.sin(this.time * 8);
       g.fillStyle = v.k === 0 ? 'rgba(255,215,90,0.3)' : 'rgba(255,40,40,0.28)';
       g.beginPath(); g.arc(px, py, R * 1.6 * pulse, 0, Math.PI * 2); g.fill();
-      const icon = relicIcon(s.cultures[v.k].id, 64);
+      const icon = relicIcon(s.cultures[v.k].id, 96);
       if (icon) g.drawImage(icon, px - R, py - R, R * 2, R * 2);
       g.lineWidth = 3; g.strokeStyle = col; g.beginPath(); g.arc(px, py, R + 1.5, 0, Math.PI * 2); g.stroke();
       if (v.k > 0) {
