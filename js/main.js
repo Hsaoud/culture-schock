@@ -25,7 +25,7 @@ const color = k => NATIONS[app.s.cultures[k].id].color;
 async function boot() {
   trackInputMode();
   initFullscreen();
-  watchHostBadge();
+  hideHostBadge();
   await loadArt(p => { $('load').style.width = p * 100 + '%'; });
   app.map = new MapView($('map'));
   app.hud = new Hud($('hud'), hudActions);
@@ -183,15 +183,14 @@ function adaptQuality(dt) {
   } else perf.fast = 0;
 }
 
-// Hébergeur qui superpose un badge en bas à droite (offre gratuite de Netlify) : le bouton
-// principal remonte pour rester visible et cliquable.
-function watchHostBadge() {
-  const check = () => {
-    const on = !!document.getElementById('nl-badge-frame');
-    if (on !== document.body.classList.contains('host-badge')) { document.body.classList.toggle('host-badge', on); layout(); }
-  };
-  new MutationObserver(check).observe(document.body, {childList: true});
-  check();
+// Badge « Powered by Netlify » ajouté par l'hébergeur : il cache le coin bas droit du jeu (bouton
+// principal, bandeau). Masqué s'il est présent ou inséré plus tard, en n'observant que les enfants
+// directs de <body> (là où il est ajouté), comme pour 1001-maze ; la règle CSS de index.html suffit
+// d'ordinaire, ceci la double si la page est servie sans elle.
+function hideHostBadge() {
+  const hide = () => document.querySelectorAll('#nl-badge-frame, iframe[title="Powered by Netlify"]').forEach(f => f.style.setProperty('display', 'none', 'important'));
+  new MutationObserver(hide).observe(document.body, {childList: true});
+  hide();
 }
 
 function setSpeed(v) {

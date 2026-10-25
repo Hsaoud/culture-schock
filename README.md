@@ -10,7 +10,7 @@ Des illustrations (`assets/art`), de la carte (`assets/world.json`) et des clich
   (modules ES, rechargement direct). Après une modification du JS, `npm run build` régénère `jouer.html` + `dist/game.js`.
 - `npm test` : moteur et éditions. `npm run check:locales` : clés et variables des traductions.
 - `?all` débloque toutes les nations, `?debug` expose l'état dans la console (`CS`).
-- En ligne : le dépôt est statique, il peut être publié tel quel (GitHub Pages, tout hébergement de fichiers). L'offre gratuite de Netlify superpose son badge « Powered by Netlify » (il fait partie de l'offre et ne se masque pas) ; le jeu remonte alors son bouton principal pour qu'il reste cliquable. GitHub Pages n'ajoute rien.
+- En ligne : le dépôt est statique, il peut être publié tel quel (GitHub Pages, tout hébergement de fichiers). L'offre gratuite de Netlify superpose un badge « Powered by Netlify » qui cachait le coin bas droit du jeu : il est masqué (règle CSS dans `index.html` et `hideHostBadge` dans `js/main.js`, comme pour 1001-maze). Netlify présente ce badge comme faisant partie de son offre gratuite ; GitHub Pages (https://hsaoud.github.io/culture-schock/) n'en ajoute aucun.
 - Sur téléphone, « Ajouter à l'écran d'accueil » installe le jeu, qui s'ouvre alors en plein écran (manifeste `site.webmanifest`, icônes dans `icons/`).
 
 ## Le jeu en une phrase
