@@ -1,0 +1,4 @@
+node_modules/
+*.log
+# Source cartographique brute (Natural Earth), seulement pour régénérer assets/world.json.
+assets/world-source.geojson
