@@ -1,0 +1,20 @@
+{
+  "name": "culture-shock",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Jeu de stratégie satirique en temps réel, entièrement local.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.11",
+    "three": "^0.180.0"
+  }
+}

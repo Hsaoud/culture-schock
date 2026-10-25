@@ -1,0 +1,32 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>Culture Shock · QA langues</title>
+<style>body{font:16px/1.6 system-ui;max-width:850px;margin:40px auto;padding:20px;background:#102629;color:#f3e5c6}pre{white-space:pre-wrap}.pass{color:#a7e2aa}.fail{color:#ff9b92}</style>
+<h1>Vérification des langues</h1><pre id="result" data-no-translate>Vérification en cours…</pre><section id="fixture"></section>
+<script type="module">
+import {setLanguage,observeTranslations} from '../game/i18n.js';
+const fixture=document.querySelector('#fixture'),output=document.querySelector('#result'),results=[];
+const assert=(ok,label)=>{results.push(`${ok?'✓':'✗'} ${label}`);if(!ok)throw Error(label);};
+const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
+const observer=observeTranslations(document);
+try{
+ fixture.innerHTML='<button data-action="tourist" aria-label="Envoyer" title="Votre emblème">Choisissez votre héritage</button><input placeholder="Rechercher un territoire…" value="France"><span data-no-translate>Français · France</span>';
+ const button=fixture.querySelector('button'),input=fixture.querySelector('input');
+ for(const [language,label] of [['en-GB','Choose your heritage'],['zh-CN','选择你的文化传承'],['ru','Выберите своё наследие'],['it','Scegli la tua eredità'],['en-US','Choose your heritage'],['fr','Choisissez votre héritage']]){
+  setLanguage(language);observer.refresh();await flush();
+  assert(button.textContent===label,`Texte : ${language}`);
+  assert(document.documentElement.lang===language,`Attribut lang : ${language}`);
+  assert(button.dataset.action==='tourist'&&input.value==='France','Les commandes et saisies restent intactes');
+  assert(fixture.querySelector('[data-no-translate]').textContent==='Français · France','Les noms natifs restent intacts');
+ }
+ setLanguage('zh-CN');observer.refresh();await flush();
+ button.textContent='Mettre en pause';button.setAttribute('aria-label','Reprendre la partie');
+ const dynamic=document.createElement('p');dynamic.innerHTML='JOUR 023 · <strong>Diplomate</strong>';fixture.append(dynamic);await flush();
+ assert(button.textContent==='暂停'&&button.getAttribute('aria-label')==='继续游戏','Mises à jour dynamiques et accessibilité');
+ assert(input.placeholder==='搜索地区…','Champ de recherche traduit');
+ assert(dynamic.textContent==='第 023 天 · 外交官','Texte dynamique avec balisage conservé');
+ setLanguage('fr');observer.refresh();await flush();
+ assert(button.textContent==='Mettre en pause'&&button.getAttribute('aria-label')==='Reprendre la partie','Retour à la source française après mise à jour');
+ assert(dynamic.querySelector('strong').textContent==='Diplomate','Les éléments imbriqués sont préservés');
+ results.push('Tous les contrôles DOM sont passés.');output.className='pass';
+}catch(error){results.push(error.stack);output.className='fail';}
+finally{observer.disconnect();output.textContent=results.join('\n');}
+</script></html>

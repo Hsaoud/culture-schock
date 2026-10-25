@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#151c29" />
+  <meta name="description" content="Culture Shock — un jeu de stratégie satirique. Exportez vos clichés, protégez votre emblème, convertissez le monde." />
+  <title>Culture Shock · La conquête du mauvais goût</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff674d'/%3E%3Ctext x='32' y='47' font-size='46' text-anchor='middle'%3E✳%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./theme.css" />
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <div id="boot" role="status">Préparation du sommet de la mauvaise foi…</div>
+  <div id="app" hidden>
+    <header class="topbar">
+      <a href="#" class="brand" id="brand" aria-label="Culture Shock, menu"><span class="brand-symbol">✳</span><span>CULTURE<span class="brand-bottom">SHOCK<span class="brand-dot">®</span></span></span></a>
+      <span class="edition">STRATÉGIE MONDIALE<br><strong>MAUVAISE FOI LOCALE.</strong></span>
+      <div class="resources" id="resources"></div>
+      <div class="header-actions"><button class="icon-button" id="sound" aria-label="Activer les sons" title="Activer les sons">♪</button><button class="icon-button" data-do="help" aria-label="Comment jouer" title="Comment jouer (?)">?</button><button class="icon-button" data-do="menu" aria-label="Menu de la partie" title="Menu">☰</button></div>
+    </header>
+    <div class="newsbar"><span class="live-dot"></span><strong>LE MONDE DÉRAILLE</strong><span class="news-divider"></span><p id="news"></p><span class="news-mark">24/7 · ÉDITION SPÉCIALE</span></div>
+    <div class="shell">
+      <nav class="rail" aria-label="Navigation du jeu">
+        <button class="nav-button active" data-do="map" title="Carte mondiale" aria-label="Carte mondiale"><span>◎</span><small>MONDE</small></button>
+        <button class="nav-button" data-do="research" title="Recherche (R)" aria-label="Ouvrir la recherche"><span>✳</span><small>RECHERCHE</small><i id="research-dot"></i></button>
+        <button class="nav-button" data-do="atlas" title="Atlas des territoires" aria-label="Atlas des territoires"><span>⚑</span><small>TERRITOIRES</small></button>
+        <button class="nav-button" data-do="journal" title="Journal de campagne" aria-label="Journal de campagne"><span>▤</span><small>JOURNAL</small></button>
+        <span class="rail-spacer"></span><span class="rail-caption">LE MONDE<br>EST À VOUS.<br><b>DÉSOLÉ.</b></span><button class="nav-button" data-do="help" aria-label="Guide de jeu"><span>ⓘ</span><small>LE BRIEF</small></button>
+      </nav>
+      <main>
+        <section class="campaign-head"><div><p class="eyebrow"><span class="live-dot purple"></span> CENTRE DE COMMANDEMENT / OPÉRATION HÉGÉMONIE</p><h1>Front culturel mondial<span>.</span></h1><p class="subtitle" id="campaign-subtitle"></p></div><div class="time-block"><span class="day" id="day">JOUR 001</span><div class="speed-controls" aria-label="Vitesse de jeu"><button id="pause" title="Pause (Espace)" aria-label="Mettre en pause">Ⅱ</button><button data-speed="1" class="active">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div></div></section>
+        <div class="game-grid">
+          <section class="map-card" aria-label="Carte stratégique mondiale">
+            <div class="map-top"><div><span class="map-live"></span><strong>THÉÂTRE DES OPÉRATIONS</strong><span class="map-tag">EN DIRECT</span></div><button class="map-filter" id="map-filter" title="Changer la couche de la carte">◉ &nbsp; Influence culturelle</button></div>
+            <div class="map-viewport" id="map-viewport"><svg id="world-map" viewBox="0 0 1080 520" role="img" aria-label="Carte du monde interactive. Utilisez l’atlas pour sélectionner un pays au clavier."><defs><pattern id="grid" width="54" height="52" patternUnits="userSpaceOnUse"><path d="M54 0H0V52" fill="none" stroke="#ffffff" stroke-opacity=".04" stroke-width=".6"/></pattern><radialGradient id="sea"><stop stop-color="#263749"/><stop offset="1" stop-color="#17212f"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="3"/></filter></defs><rect width="1080" height="520" fill="url(#sea)"/><rect width="1080" height="520" fill="url(#grid)"/><g id="map-layer"><g id="countries"></g><g class="ocean-labels"><text x="230" y="320">OCÉAN PACIFIQUE</text><text x="450" y="295">OCÉAN ATLANTIQUE</text><text x="770" y="380">OCÉAN INDIEN</text><text x="1000" y="250">PACIFIQUE</text></g><g id="routes"></g><g id="markers"></g></g></svg><div id="map-tooltip" class="map-tooltip" hidden></div><div class="map-caption"><span>◈</span><strong>Chaque cliché compte.</strong><small>Cliquez sur un pays pour semer le doute.</small></div><div class="zoom-controls"><button id="zoom-in" aria-label="Zoomer">+</button><button id="zoom-out" aria-label="Dézoomer">−</button><button id="zoom-reset" aria-label="Réinitialiser la carte">⌖</button></div><div class="pause-badge" id="pause-badge" hidden>Ⅱ &nbsp; LE MONDE RETIENT SON SOUFFLE</div></div>
+            <div class="map-bottom"><div class="legend"><span><i class="neutral"></i>Imperméable</span><span><i class="spreading"></i>Sous influence</span><span><i class="converted"></i>Assimilé</span><span><i class="home"></i>Votre nation</span></div><span class="map-coordinates">MONDE / 01</span></div>
+          </section>
+          <aside class="country-panel" id="country-panel" aria-label="Pays sélectionné"></aside>
+          <section class="home-dock" id="status-grid" aria-label="Votre pays et votre progression"></section>
+        </div>
+        <footer class="footer"><span><span class="live-dot"></span><span id="save-status">SAUVEGARDE AUTOMATIQUE ACTIVE</span></span><span>CECI EST UNE SATIRE. TOUT LE MONDE PREND.</span><button data-do="help">ESPACE : PAUSE <span>·</span> R : RECHERCHE <span>↗</span></button></footer>
+      </main>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <dialog id="dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  </div>
+  <noscript>Activez JavaScript pour jouer à Culture Shock.</noscript>
+</body>
+</html>

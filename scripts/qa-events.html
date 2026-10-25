@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Les 336 récits — Culture Shock</title>
+<style>
+:root{color-scheme:dark;font-family:Georgia,serif;color:#f9e8bf;background:#08151f}*{box-sizing:border-box}body{margin:0;padding:28px;max-width:1500px;margin:auto}header{border-bottom:1px solid #b7975b69;padding-bottom:20px;margin-bottom:22px}h1{margin:0 0 10px;font-size:30px}p{font:14px/1.6 system-ui;color:#b9c8bd}nav{display:flex;gap:18px;flex-wrap:wrap}label{font:12px system-ui;color:#e9c680}select{display:block;margin-top:7px;min-width:190px;padding:10px;background:#142e31;color:#f9e8bf;border:1px solid #b7975b}main{display:grid;grid-template-columns:minmax(240px,360px) 1fr;gap:28px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:start}button{background:#112a2e;color:#f9e8bf;border:1px solid #b7975b69;padding:0;cursor:pointer;text-align:left}button[aria-pressed=true]{border:2px solid #e9c680}button span{display:block;font:12px/1.4 system-ui;padding:10px}button:focus-visible{outline:3px solid #85f7df;outline-offset:3px}.art{aspect-ratio:1;background-repeat:no-repeat;background-size:400% 300%}article{background:#112a2e;border:1px solid #b7975b69;padding:16px}h2{font-size:22px;line-height:1.3}article li{font:13px/1.5 system-ui;margin-bottom:15px}article small{display:block;color:#a3b8b3;margin-top:5px}.count{color:#e9c680;font-size:11px;letter-spacing:.12em}a{color:#8ddbc2}@media(max-width:760px){body{padding:16px}main{display:flex;flex-direction:column}.grid{grid-template-columns:repeat(3,1fr);gap:8px}button span{font-size:10px;padding:6px}article>.art{max-width:240px;margin:auto}}
+</style></head><body>
+<header><p class="count">CULTURE SHOCK · ATLAS DES ÉVÈNEMENTS</p><h1>Les 336 récits illustrés</h1><p>7 nations · 4 familles · 12 variantes. Aperçu de vérification, sans effet sur les campagnes sauvegardées.</p><nav><label>Nation<select id="nation" aria-label="Nation"></select></label><label>Famille<select id="family" aria-label="Famille"></select></label></nav></header>
+<main><article id="detail"></article><section class="grid" id="variants" aria-label="Les douze variantes"></section></main>
+<script type="module">
+import {NATIONS,EVENTS,eventFor,EVENT_VARIANT_COUNT} from '../data.js';
+const nation=document.querySelector('#nation'),family=document.querySelector('#family');
+const names={food:'Tradition en débat',viral:'Phénomène viral',counter:'Choc des habitudes',summit:'Table des négociations'};
+for(const [id,n] of Object.entries(NATIONS))nation.add(new Option(n.name,id));
+for(const e of EVENTS)family.add(new Option(names[e.id],e.id));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function art(e){return `<div class="art" role="img" aria-label="${esc(e.title)}" style="${e.illustration.style.replace(e.illustration.src,'../'+e.illustration.src)}"></div>`;}
+let selected=0;
+function render(){const events=Array.from({length:EVENT_VARIANT_COUNT},(_,i)=>eventFor(nation.value,family.value,i)),event=events[selected];document.querySelector('#variants').innerHTML=events.map((e,i)=>`<button data-variant="${i}" aria-pressed="${i===selected}">${art(e)}<span>${String(i+1).padStart(2,'0')} · ${esc(e.title)}</span></button>`).join('');document.querySelector('#detail').innerHTML=`${art(event)}<p class="count">RÉCIT ${selected+1} / 12</p><h2>${esc(event.title)}</h2><p>${esc(event.text)}</p><ol>${event.choices.map(c=>`<li>${esc(c.label)}<small>${esc(c.detail)}</small></li>`).join('')}</ol>`;}
+nation.addEventListener('change',()=>{selected=0;render();});family.addEventListener('change',()=>{selected=0;render();});document.querySelector('#variants').addEventListener('click',e=>{const button=e.target.closest('[data-variant]');if(button){selected=+button.dataset.variant;render();}});render();
+</script></body></html>
